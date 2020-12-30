@@ -1,3 +1,5 @@
+import 'package:devops/api/work.dart';
+import 'package:devops/pages/work/work_list.dart';
 import 'package:devops/secrets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +24,7 @@ class _HomePageState extends State<HomePage> {
   AzureDevOpsApi _api;
 
   Profile _account;
+  List<WorkItem> _work;
 
   @override
   void initState() {
@@ -102,7 +105,7 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return organisations();
       case 1:
-        return myWork();
+        return WorkList(null);
       case 2:
         return ProfileWidget(_account);
     }
@@ -111,14 +114,11 @@ class _HomePageState extends State<HomePage> {
 
   Widget organisations() {}
 
-  Widget myWork() {}
-
   void loadContent() {
-    var account = _api.getMe();
-
-    account.then((value) => setState(() {
+    _api.getMe().then((value) => setState(() {
           _account = value;
           _contentReady = true;
         }));
+    _api.work().getWorkItems().then((value) => setState(() => _work = value));
   }
 }

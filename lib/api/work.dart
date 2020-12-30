@@ -1,3 +1,5 @@
+import 'package:devops/api/api.dart';
+
 class WorkItem {
   final String url;
   final int rev;
@@ -26,4 +28,12 @@ class WorkItemCommentVersionRef {
 
   WorkItemCommentVersionRef(this.commentId, this.createdInRevision,
       this.isDeleted, this.text, this.url, this.version);
+}
+
+class WorkApi {
+  final AzureDevOpsApi _api;
+
+  WorkApi(this._api);
+
+  Future<List<WorkItem>> getWorkItems() {}
 }

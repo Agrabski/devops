@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:devops/api/project.dart';
+import 'package:devops/api/work.dart';
 import 'package:http/http.dart' as http;
 
 import 'account.dart';
@@ -81,5 +82,9 @@ class AzureDevOpsApi {
 
   AccountApi Account() {
     return AccountApi(this);
+  }
+
+  WorkApi work() {
+    return WorkApi(this);
   }
 }
