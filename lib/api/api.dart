@@ -28,18 +28,38 @@ class AzureDevOpsApi {
 
   String _userId;
 
-  Future<T> makeGetApiCall<T>(
-      String urlPath, T Function(dynamic) converter, UrlType type) async {
+  String _getToken() {
     var bytes = utf8.encode(":$_personalAccessToken");
     var token = base64.encode(bytes);
-    if (urlPath.contains('?'))
-      urlPath += '&';
-    else
-      urlPath += '?';
-    urlPath += "api-version=6.0";
+    return token;
+  }
+
+  Future<T> makeGetApiCall<T>(
+      String urlPath, T Function(dynamic) converter, UrlType type) async {
+    if (!urlPath.contains('api-version')) {
+      if (urlPath.contains('?'))
+        urlPath += '&';
+      else
+        urlPath += '?';
+      urlPath += "api-version=6.0";
+    }
     var response = await http.get("${_getUrl(type)}$urlPath", headers: {
-      HttpHeaders.authorizationHeader: "Basic $token",
+      HttpHeaders.authorizationHeader: "Basic ${_getToken()}",
     });
+    if (response.statusCode == 200) {
+      return converter((jsonDecode(response.body)));
+    }
+    throw Exception(
+        "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
+  }
+
+  Future<T> makePostApiCall<T>(String urlPath, T Function(dynamic) converter,
+      UrlType type, Map<String, dynamic> body,
+      {Map<String, String> headers}) async {
+    headers = headers ?? Map();
+    headers[HttpHeaders.authorizationHeader] = "Basic ${_getToken()}";
+    var response = await http.post("${_getUrl(type)}$urlPath",
+        headers: headers, body: jsonEncode(body));
     if (response.statusCode == 200) {
       return converter((jsonDecode(response.body)));
     }
@@ -54,6 +74,7 @@ class AzureDevOpsApi {
       case UrlType.Dev:
         return _defaultDevUrl;
     }
+    throw Exception("invalid type: $type");
   }
 
   AzureDevOpsApi(this._personalAccessToken, this._AppUrl, this._DevUrl);

@@ -34,11 +34,17 @@ class _HomePageState extends State<HomePage> {
               if (!value)
                 Navigator.push(
                         context, MaterialPageRoute(builder: (c) => Login()))
-                    .then((_) => readApiKey().then((key) =>
-                        {_api = AzureDevOpsApi.getDefault(key), loadContent()}))
+                    .then((_) => readApiKey().then((key) => {
+                          _hasApiKey = true,
+                          _api = AzureDevOpsApi.getDefault(key),
+                          loadContent()
+                        }))
               else
-                readApiKey().then((key) =>
-                    {_api = AzureDevOpsApi.getDefault(key), loadContent()})
+                readApiKey().then((key) => {
+                      _hasApiKey = true,
+                      _api = AzureDevOpsApi.getDefault(key),
+                      loadContent()
+                    })
             }));
     super.initState();
   }
@@ -105,7 +111,7 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return organisations();
       case 1:
-        return WorkList(null);
+        return WorkList(_work);
       case 2:
         return ProfileWidget(_account);
     }
@@ -119,6 +125,10 @@ class _HomePageState extends State<HomePage> {
           _account = value;
           _contentReady = true;
         }));
-    _api.work().getWorkItems().then((value) => setState(() => _work = value));
+    _api
+        .work()
+        .getMyWorkItems('GameDevWannabe')
+        .then((value) => setState(() => _work = value));
+    //throw Exception();
   }
 }
