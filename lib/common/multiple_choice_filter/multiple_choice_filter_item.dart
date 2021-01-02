@@ -27,11 +27,12 @@ class _MultipleChoiceFilterItemState extends State<MultipleChoiceFilterItem> {
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
-    return ChoiceChip(
+    return Padding(padding: EdgeInsets.symmetric(vertical: 10), child: ChoiceChip(
         label: Text(_text),
-        onSelected: (b) => {
+        onSelected: (b) => setState(()=>{
               _isSelected = b,
               if (_isSelected) _onSelected(_text),
-            });
+            }),
+    selected: _isSelected,));
   }
 }

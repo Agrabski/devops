@@ -22,8 +22,8 @@ enum UrlType { App, Dev }
 class AzureDevOpsApi {
   static final _defaultAppUrl = "https://app.vssps.visualstudio.com/";
   static final _defaultDevUrl = "https://dev.azure.com/";
-  final String _AppUrl;
-  final String _DevUrl;
+  final String _appUrl;
+  final String _devUrl;
   final String _personalAccessToken;
 
   String _userId;
@@ -70,14 +70,14 @@ class AzureDevOpsApi {
   String _getUrl(UrlType type) {
     switch (type) {
       case UrlType.App:
-        return _defaultAppUrl;
+        return _appUrl;
       case UrlType.Dev:
-        return _defaultDevUrl;
+        return _devUrl;
     }
     throw Exception("invalid type: $type");
   }
 
-  AzureDevOpsApi(this._personalAccessToken, this._AppUrl, this._DevUrl);
+  AzureDevOpsApi(this._personalAccessToken, this._appUrl, this._devUrl);
   static AzureDevOpsApi getDefault(String personalAccessToken) {
     return AzureDevOpsApi(personalAccessToken, _defaultAppUrl, _defaultDevUrl);
   }
