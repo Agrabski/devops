@@ -10,11 +10,17 @@ import 'account.dart';
 class Profile {
   final String id;
   final String displayName;
+  final String url;
+  final String uniqueName;
+  final String base64image;
+  final String descriptor;
   static Profile fromJson(Map<String, dynamic> o) {
-    return Profile(o['id'], o['displayName']);
+    return Profile(o['id'], o['displayName'], o['url'], o['uniqueName'],
+        o['coreAttributes']['Avatar']['value']['value'], o['descriptor']);
   }
 
-  Profile(this.id, this.displayName);
+  Profile(this.id, this.displayName, this.url, this.uniqueName,
+      this.base64image, this.descriptor);
 }
 
 enum UrlType { App, Dev }
@@ -53,6 +59,10 @@ class AzureDevOpsApi {
         "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
   }
 
+  Future<T> makePatchApiCall<T>(String urlPath, T Function(dynamic) converter,
+      UrlType type, Map<String, dynamic> body,
+      {Map<String, String> headers}) async {}
+
   Future<T> makePostApiCall<T>(String urlPath, T Function(dynamic) converter,
       UrlType type, Map<String, dynamic> body,
       {Map<String, String> headers}) async {
@@ -87,8 +97,8 @@ class AzureDevOpsApi {
   }
 
   Future<Profile> getMe() {
-    return makeGetApiCall<Profile>(
-        '_apis/profile/profiles/me', (r) => Profile.fromJson(r), UrlType.App);
+    return makeGetApiCall<Profile>('_apis/profile/profiles/me?details=true',
+        (r) => Profile.fromJson(r), UrlType.App);
   }
 
   Future<String> userId() async {

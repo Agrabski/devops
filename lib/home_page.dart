@@ -111,7 +111,7 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return organisations();
       case 1:
-        return WorkList(_work);
+        return WorkList(_work, _api.work());
       case 2:
         return ProfileWidget(_account);
     }

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -18,6 +21,14 @@ class ProfileWidget extends StatefulWidget {
 class _ProfileWidgetState extends State<ProfileWidget> {
   final Profile _account;
 
+  Uint8List _imageBytes;
+
+  @override
+  void initState() {
+    _imageBytes = base64Decode(_account.base64image);
+    super.initState();
+  }
+
   _ProfileWidgetState(this._account);
 
   @override
@@ -29,7 +40,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               ListTile(
-                leading: Icon(Icons.album),
+                leading: Image.memory(_imageBytes),
                 title: Text(_account.displayName),
                 subtitle: Text('Music by Julie Gable. Lyrics by Sidney Stein.'),
               ),

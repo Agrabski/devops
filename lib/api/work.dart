@@ -1,6 +1,8 @@
 import 'package:devops/api/api.dart';
 
 class WorkItem {
+  final String organisation;
+  final String project;
   final String url;
   final int rev;
   final int id;
@@ -9,10 +11,11 @@ class WorkItem {
   final ReferenceLinks _links;
 
   WorkItem(this.url, this.rev, this.id, this.fields, this.commentVersionRef,
-      this._links);
-  static WorkItem fromJson(Map<String, dynamic> e) {
+      this._links, this.organisation, this.project);
+  static WorkItem convert(
+      Map<String, dynamic> e, String organisation, String project) {
     return WorkItem(e['url'], e['rev'], e['id'], e['fields'],
-        e['commentVersionRef'], e['_links']);
+        e['commentVersionRef'], e['_links'], organisation, project);
   }
 }
 
@@ -39,10 +42,12 @@ class WorkApi {
 
   WorkApi(this._api);
 
-  static List<WorkItem> _convert(dynamic object) {
+  static List<WorkItem> _convert(
+      dynamic object, String organisation, String project) {
     return (object['value'] as Iterable<dynamic>)
         .map((x) => x as Map<dynamic, dynamic>)
-        .map((k) => WorkItem.fromJson(k as Map<String, dynamic>))
+        .map((k) =>
+            WorkItem.convert(k as Map<String, dynamic>, organisation, project))
         .toList(growable: false);
   }
 
@@ -53,17 +58,22 @@ class WorkApi {
     if (project != null) path += project + '/';
 
     path += '_apis/wit/workitemsbatch?api-version=6.0';
-    return _api.makePostApiCall(path, _convert, UrlType.Dev, {
+    return _api.makePostApiCall(
+        path,
+        (e) => _convert(e, organisation, e['System.TeamProject']),
+        UrlType.Dev, {
       "ids": ids.toList(growable: false),
       "fields": [
         "System.Title",
         "System.WorkItemType",
         "Microsoft.VSTS.Scheduling.RemainingWork",
-        "System.State"
+        "System.State",
+        "System.TeamProject"
       ]
-    }, headers: {
-      "Content-Type": "application/json"
-    });
+    },
+        headers: {
+          "Content-Type": "application/json"
+        });
   }
 
   Future<List<WorkItem>> getMyWorkItems(String organisation,
@@ -81,7 +91,6 @@ class WorkApi {
         UrlType.Dev,
         {'query': 'SELECT [System.Id] FROM workitem'},
         headers: {"Content-Type": "application/json"});
-    var x = List.from(ids);
     var result = List<WorkItem>();
     while (ids.isNotEmpty) {
       // azure devops api only lets you take 200 work items at a time
@@ -90,5 +99,13 @@ class WorkApi {
       ids = ids.skip(200);
     }
     return result;
+  }
+
+  Future assignWorkItem(WorkItem item, Profile user) {
+    return _api.makePatchApiCall(
+        '${item.organisation}/_apis/wit/workitems/${item.id}?api-version=6.0',
+        (e) => null,
+        UrlType.Dev,
+        {'op': 'add', 'path': '/fields/System.AssignedTo', 'value': user.id});
   }
 }
