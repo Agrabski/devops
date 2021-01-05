@@ -3,13 +3,16 @@ import 'package:devops/api/api.dart';
 class Account {
   final String accountId;
   final String accountName;
-  final String accountOwner;
   final String organizationName;
 
-  Account(this.accountId, this.accountName, this.accountOwner,
-      this.organizationName);
+  Account({this.accountId, this.accountName, this.organizationName});
 
-  static Account fromJson(e) {}
+  static Account fromJson(e) {
+    return Account(
+        accountId: e['accountId'],
+        accountName: e['accountName'],
+        organizationName: e['organizationName']);
+  }
   //todo: more attributes
 }
 
@@ -18,11 +21,11 @@ class AccountApi {
 
   AccountApi(this._api);
 
-  Future<List<Account>> getAccounts() async {
+  Future<List<Account>> getAccounts(String accountId) async {
     return _api.makeGetApiCall(
-        "_apis/accounts?memberId=${await _api.userId()}",
+        "_apis/accounts?memberId=$accountId",
         (r) => List<Account>.from(
             (r['value'] as Iterable).map((e) => Account.fromJson(e))),
-        UrlType.Dev);
+        UrlType.App);
   }
 }

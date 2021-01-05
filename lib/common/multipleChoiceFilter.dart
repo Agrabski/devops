@@ -1,4 +1,5 @@
 import 'package:chips_choice/chips_choice.dart';
+import 'package:expandable/expandable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -31,8 +32,8 @@ class _MultipleChoiceFilterState extends State<MultipleChoiceFilter> {
       this._choices, this._currentChoices, this._onChoiceChanged, this._title);
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Row(
+    return ExpandablePanel(
+      header: Row(
         children: [
           Text(_title),
           ChoiceChip(
@@ -46,7 +47,7 @@ class _MultipleChoiceFilterState extends State<MultipleChoiceFilter> {
         ],
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
       ),
-      ChipsChoice<String>.multiple(
+      expanded: ChipsChoice<String>.multiple(
         value: _currentChoices,
         onChanged: (x) => {
           setState(() => _currentChoices = x),
@@ -55,7 +56,7 @@ class _MultipleChoiceFilterState extends State<MultipleChoiceFilter> {
         choiceItems: _choices.map((e) => C2Choice(value: e, label: e)).toList(),
         wrapped: true,
         choiceStyle: C2ChoiceStyle(showCheckmark: false),
-      )
-    ]);
+      ),
+    );
   }
 }

@@ -1,24 +1,26 @@
 import 'package:devops/api/api.dart';
+import 'package:devops/api/profile.dart';
 import 'package:devops/api/work.dart';
-import 'package:devops/common/multiple_choice_filter/multipleChoiceFilter.dart';
+import 'package:devops/common/multipleChoiceFilter.dart';
+import 'package:devops/common/pick_string.dart';
 import 'package:devops/user/select_user.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class WorkList extends StatefulWidget {
+  final AzureDevOpsApi _api;
   final List<WorkItem> _work;
-  final WorkApi _api;
 
-  WorkList(this._work, this._api, {Key key}) : super(key: key);
+  WorkList(this._api, this._work, {Key key}) : super(key: key);
   @override
   State<StatefulWidget> createState() {
-    // TODO: implement createState
-    return _WorkListState(_work, _api);
+    return _WorkListState(_api, this._work);
   }
 }
 
 class _WorkListState extends State<WorkList> {
-  final WorkApi _api;
+  final AzureDevOpsApi _api;
   static const List<String> _workItemTypes = [
     'Issue',
     'Task',
@@ -29,8 +31,12 @@ class _WorkListState extends State<WorkList> {
 
   List<String> _selectedWorkItemTypes = _workItemTypes;
   List<String> _selectedStates;
+  bool _doingWork = false;
 
   List<String> _allStates;
+
+  String _titleFilter = '';
+  String _organisationFilter = '';
 
   @override
   void initState() {
@@ -40,29 +46,57 @@ class _WorkListState extends State<WorkList> {
     super.initState();
   }
 
-  final List<WorkItem> _work;
-  _WorkListState(this._work, this._api);
+  List<WorkItem> _work;
+  _WorkListState(this._api, this._work);
 
   bool _filter(WorkItem x) {
     return _selectedWorkItemTypes.contains(x.fields['System.WorkItemType']) &&
-        _selectedStates.contains(x.fields['System.State']);
+        _selectedStates.contains(x.fields['System.State']) &&
+        (x.fields['System.Title'] as String)
+            .toLowerCase()
+            .contains(_titleFilter) &&
+        x.organisation.toLowerCase().contains(_organisationFilter);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
+      body: buildBody(),
+      floatingActionButton: _work != null
+          ? FloatingActionButton(
+              onPressed: _showSearchDialog,
+              child: Icon(Icons.search_rounded),
+            )
+          : null,
+    );
+  }
+
+  Widget buildBody() {
+    if (_work == null)
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            new CircularProgressIndicator(),
+            new Text("Loading content")
+          ],
+        ),
+      );
+    else
+      return Center(
           child: Scrollbar(
               child: ListView(
         children: _work.where(_filter).map(makeWorkItem).toList(),
         shrinkWrap: true,
         padding: EdgeInsets.all(15),
-      ))),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showSearchDialog,
-        child: Icon(Icons.search_rounded),
-      ),
-    );
+      )));
+  }
+
+  String getAssignee(WorkItem item) {
+    var assignee = item?.fields['System.AssignedTo'];
+    if (assignee == null) return "Unassigned";
+    return assignee["displayName"];
   }
 
   Widget makeWorkItem(WorkItem item) {
@@ -73,7 +107,14 @@ class _WorkListState extends State<WorkList> {
           ListTile(
             leading: _pickIcon(item.fields['System.WorkItemType']),
             title: Text(item.fields['System.Title']),
-            subtitle: Text('State: ${item.fields["System.State"]}'),
+            subtitle: Column(
+              children: [
+                Text('State: ${item.fields["System.State"]}'),
+                Text('Assigned to: ${getAssignee(item)}'),
+                Text('Organization: ${item.organisation}')
+              ],
+              crossAxisAlignment: CrossAxisAlignment.start,
+            ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -81,17 +122,24 @@ class _WorkListState extends State<WorkList> {
               TextButton(
                 child: const Text('Reassign'),
                 onPressed: () async {
-                  var user = await Navigator.push<Profile>(
-                      context, MaterialPageRoute(builder: (c) => SelectUser()));
+                  var profiles =
+                      await _api.profile().getProfileIdsFor(item.organisation);
+                  var user = await Navigator.push<ProfileReference>(context,
+                      MaterialPageRoute(builder: (c) => SelectUser(profiles)));
                   try {
-                    await _api.assignWorkItem(item, user);
+                    _api
+                        .work()
+                        .assignWorkItem(item, user.name)
+                        .then((value) => loadWork());
                   } catch (e) {}
                 },
               ),
               const SizedBox(width: 8),
               TextButton(
                 child: const Text('Change state'),
-                onPressed: () {/* ... */},
+                onPressed: () {
+                  changeIssueState(item);
+                },
               ),
               const SizedBox(width: 8),
               TextButton(
@@ -151,6 +199,18 @@ class _WorkListState extends State<WorkList> {
                     _selectedStates,
                     onChoiceChanged: (x) => setState(() => _selectedStates = x),
                     title: "Issue state",
+                  ),
+                  TextFormField(
+                    onChanged: (s) =>
+                        setState(() => _titleFilter = s.toLowerCase()),
+                    decoration: InputDecoration(helperText: 'Title'),
+                    initialValue: _titleFilter,
+                  ),
+                  TextFormField(
+                    onChanged: (s) =>
+                        setState(() => _organisationFilter = s.toLowerCase()),
+                    decoration: InputDecoration(helperText: 'Organisation'),
+                    initialValue: _organisationFilter,
                   )
                 ])),
                 height: 400,
@@ -162,5 +222,29 @@ class _WorkListState extends State<WorkList> {
                     child: Text("Close"))
               ],
             ));
+  }
+
+  Future loadWork() async {
+    var work = List<WorkItem>();
+    var accounts = await _api.account().getAccounts(await _api.userId());
+    for (var account in accounts)
+      work.addAll(await _api.work().getMyWorkItems(account.accountName));
+    setState(() {
+      _work = work;
+    });
+    Fluttertoast.showToast(msg: 'Done', gravity: ToastGravity.BOTTOM);
+  }
+
+  Future changeIssueState(WorkItem item) async {
+    var states = await _api.work().getIssueStates(
+        item.organisation, item.project, item.fields['System.WorkItemType']);
+    var result = await Navigator.push(context,
+        MaterialPageRoute(builder: (c) => PickString(options: states)));
+    Fluttertoast.showToast(msg: 'Updating', gravity: ToastGravity.BOTTOM);
+    if (result != null)
+      await _api
+          .work()
+          .changeIssueState(item, result)
+          .then((value) async => await loadWork());
   }
 }

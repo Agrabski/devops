@@ -1,25 +1,27 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:devops/api/profile.dart';
+import 'package:devops/common/show_or_pick_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-import '../api/api.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class ProfileWidget extends StatefulWidget {
   final Profile _account;
-
-  ProfileWidget(this._account, {Key key}) : super(key: key);
+  final ProfileApi _api;
+  ProfileWidget(this._account, this._api, {Key key}) : super(key: key);
 
   @override
   _ProfileWidgetState createState() {
     // TODO: implement createState
-    return _ProfileWidgetState(this._account);
+    return _ProfileWidgetState(this._account, this._api);
   }
 }
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   final Profile _account;
+  final ProfileApi _api;
 
   Uint8List _imageBytes;
 
@@ -29,7 +31,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     super.initState();
   }
 
-  _ProfileWidgetState(this._account);
+  _ProfileWidgetState(this._account, this._api);
 
   @override
   Widget build(BuildContext context) {
@@ -40,29 +42,44 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               ListTile(
-                leading: Image.memory(_imageBytes),
+                leading: GestureDetector(
+                  child: Image.memory(_imageBytes),
+                  onTap: changeProfilePicture,
+                ),
                 title: Text(_account.displayName),
-                subtitle: Text('Music by Julie Gable. Lyrics by Sidney Stein.'),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  TextButton(
-                    child: const Text('BUY TICKETS'),
-                    onPressed: () {/* ... */},
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    child: const Text('LISTEN'),
-                    onPressed: () {/* ... */},
-                  ),
-                  const SizedBox(width: 8),
-                ],
+                subtitle: Text(_account.id),
               ),
             ],
           ),
         ),
+        InkWell(
+          child: Card(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('Settings'),
+                )
+              ],
+            ),
+          ),
+          onTap: () => null,
+        )
       ],
     );
+  }
+
+  void changeProfilePicture() async {
+    var image = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(
+            builder: (context) =>
+                ShowOrPickImage(initialImageData: _imageBytes)));
+    if (image != null) {
+      Fluttertoast.showToast(msg: 'Updating', gravity: ToastGravity.BOTTOM);
+      _api.setAvatar(image, this._account.descriptor).then((x) =>
+          Fluttertoast.showToast(msg: 'Done', gravity: ToastGravity.BOTTOM));
+    }
   }
 }

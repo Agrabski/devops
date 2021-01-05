@@ -14,8 +14,15 @@ class WorkItem {
       this._links, this.organisation, this.project);
   static WorkItem convert(
       Map<String, dynamic> e, String organisation, String project) {
-    return WorkItem(e['url'], e['rev'], e['id'], e['fields'],
-        e['commentVersionRef'], e['_links'], organisation, project);
+    return WorkItem(
+        e['url'],
+        e['rev'],
+        e['id'],
+        e['fields'],
+        e['commentVersionRef'],
+        e['_links'],
+        organisation,
+        e['fields']['System.TeamProject']);
   }
 }
 
@@ -68,7 +75,8 @@ class WorkApi {
         "System.WorkItemType",
         "Microsoft.VSTS.Scheduling.RemainingWork",
         "System.State",
-        "System.TeamProject"
+        "System.TeamProject",
+        "System.AssignedTo"
       ]
     },
         headers: {
@@ -101,11 +109,33 @@ class WorkApi {
     return result;
   }
 
-  Future assignWorkItem(WorkItem item, Profile user) {
-    return _api.makePatchApiCall(
+  Future assignWorkItem(WorkItem item, String userName) async {
+    return await _changeFieldValue(item, 'System.AssignedTo', userName);
+  }
+
+  Future _changeFieldValue(WorkItem item, String field, String value) async {
+    return await _api.makePatchApiCall(
         '${item.organisation}/_apis/wit/workitems/${item.id}?api-version=6.0',
         (e) => null,
-        UrlType.Dev,
-        {'op': 'add', 'path': '/fields/System.AssignedTo', 'value': user.id});
+        UrlType.Dev, [
+      {'op': 'add', 'path': '/fields/$field', 'value': value}
+    ],
+        headers: {
+          "Content-Type": "application/json-patch+json"
+        });
+  }
+
+  Future<List<String>> getIssueStates(
+      String organisation, String project, String type) {
+    return _api.makeGetApiCall(
+        '$organisation/$project/_apis/wit/workitemtypes/$type/states?api-version=6.0-preview.1',
+        (e) => (e['value'] as Iterable<dynamic>)
+            .map((x) => x['name'] as String)
+            .toList(),
+        UrlType.Dev);
+  }
+
+  Future changeIssueState(WorkItem item, String newState) async {
+    return await _changeFieldValue(item, 'System.State', newState);
   }
 }

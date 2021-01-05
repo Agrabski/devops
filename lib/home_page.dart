@@ -3,8 +3,10 @@ import 'package:devops/pages/work/work_list.dart';
 import 'package:devops/secrets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import 'api/api.dart';
+import 'api/profile.dart';
 import 'login.dart';
 import 'pages/profile.dart';
 
@@ -19,8 +21,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _hasApiKey = false;
-  bool _contentReady = false;
+  bool _contentReady() => _work != null;
   int _currentIndex = 0;
+
   AzureDevOpsApi _api;
 
   Profile _account;
@@ -51,8 +54,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    if (_hasApiKey && _contentReady) {
+    if (_hasApiKey && _contentReady()) {
       return Scaffold(
         appBar: bar(),
         body: buildBody(),
@@ -68,7 +70,13 @@ class _HomePageState extends State<HomePage> {
 
   AppBar bar() {
     return AppBar(
-      title: Text("Azure DevOps"),
+      title: Row(
+        children: [
+          Text("Azure DevOps"),
+          IconButton(icon: Icon(Icons.refresh), onPressed: () => loadContent())
+        ],
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      ),
     );
   }
 
@@ -80,11 +88,12 @@ class _HomePageState extends State<HomePage> {
         BottomNavigationBarItem(label: "My work", icon: Icon(Icons.work)),
         BottomNavigationBarItem(label: "Profile", icon: Icon(Icons.person))
       ],
-      onTap: (i) =>
-          {if (_hasApiKey && _contentReady) setState(() => _currentIndex = i)},
+      onTap: (i) => {
+        if (_hasApiKey && _contentReady()) setState(() => _currentIndex = i)
+      },
       currentIndex: _currentIndex,
     );
-    if (_hasApiKey && _contentReady) return bar;
+    if (_hasApiKey && _contentReady()) return bar;
     return Theme(
         child: bar,
         data: ThemeData(
@@ -111,9 +120,9 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return organisations();
       case 1:
-        return WorkList(_work, _api.work());
+        return WorkList(_api, _work);
       case 2:
-        return ProfileWidget(_account);
+        return ProfileWidget(_account, _api.profile());
     }
     throw Exception("invalid index");
   }
@@ -121,14 +130,28 @@ class _HomePageState extends State<HomePage> {
   Widget organisations() {}
 
   void loadContent() {
+    _work = null;
+    loadWork();
     _api.getMe().then((value) => setState(() {
           _account = value;
-          _contentReady = true;
         }));
-    _api
-        .work()
-        .getMyWorkItems('GameDevWannabe')
-        .then((value) => setState(() => _work = value));
     //throw Exception();
+  }
+
+  Future loadWork() async {
+    try {
+      var work = List<WorkItem>();
+      var accounts = await _api.account().getAccounts(await _api.userId());
+      for (var account in accounts)
+        work.addAll(await _api.work().getMyWorkItems(account.accountName));
+      setState(() {
+        _work = work;
+      });
+    } catch (e) {
+      Fluttertoast.showToast(msg: e.toString(), gravity: ToastGravity.CENTER);
+      setState(() {
+        _work = List<WorkItem>();
+      });
+    }
   }
 }
