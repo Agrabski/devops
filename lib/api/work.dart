@@ -76,7 +76,8 @@ class WorkApi {
         "Microsoft.VSTS.Scheduling.RemainingWork",
         "System.State",
         "System.TeamProject",
-        "System.AssignedTo"
+        "System.AssignedTo",
+        "System.Description"
       ]
     },
         headers: {
@@ -110,19 +111,19 @@ class WorkApi {
   }
 
   Future assignWorkItem(WorkItem item, String userName) async {
-    return await _changeFieldValue(item, 'System.AssignedTo', userName);
+    return await changeFieldValues(
+        item, {'/fields/System.AssignedTo': userName});
   }
 
-  Future _changeFieldValue(WorkItem item, String field, String value) async {
+  Future changeFieldValues(WorkItem item, Map<String, String> fields) async {
     return await _api.makePatchApiCall(
         '${item.organisation}/_apis/wit/workitems/${item.id}?api-version=6.0',
         (e) => null,
-        UrlType.Dev, [
-      {'op': 'add', 'path': '/fields/$field', 'value': value}
-    ],
-        headers: {
-          "Content-Type": "application/json-patch+json"
-        });
+        UrlType.Dev,
+        fields.entries
+            .map((e) => {'op': 'add', 'path': e.key, 'value': e.value})
+            .toList(),
+        headers: {"Content-Type": "application/json-patch+json"});
   }
 
   Future<List<String>> getIssueStates(
@@ -136,6 +137,10 @@ class WorkApi {
   }
 
   Future changeIssueState(WorkItem item, String newState) async {
-    return await _changeFieldValue(item, 'System.State', newState);
+    return await changeFieldValues(item, {'/fields/System.State': newState});
+  }
+
+  Future<WorkItem> getWorkItem(int id, String organization) {
+    return getWorkItemBatch(organization, [id]).then((value) => value.first);
   }
 }

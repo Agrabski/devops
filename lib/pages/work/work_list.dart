@@ -3,6 +3,7 @@ import 'package:devops/api/profile.dart';
 import 'package:devops/api/work.dart';
 import 'package:devops/common/multipleChoiceFilter.dart';
 import 'package:devops/common/pick_string.dart';
+import 'package:devops/pages/work/edit_wrok_item.dart';
 import 'package:devops/user/select_user.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -144,7 +145,7 @@ class _WorkListState extends State<WorkList> {
               const SizedBox(width: 8),
               TextButton(
                 child: const Text('Edit'),
-                onPressed: () {/* ... */},
+                onPressed: () => edit(item),
               ),
               const SizedBox(width: 8),
             ],
@@ -246,5 +247,12 @@ class _WorkListState extends State<WorkList> {
           .work()
           .changeIssueState(item, result)
           .then((value) async => await loadWork());
+  }
+
+  edit(WorkItem item) {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (c) => EditWorkItem(item: item, api: _api.work())));
   }
 }
