@@ -1,5 +1,7 @@
 import 'package:devops/api/api.dart';
 import 'package:devops/api/project.dart';
+import 'package:devops/api/work.dart';
+import 'package:devops/pages/work/edit_wrok_item.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -50,8 +52,9 @@ class _NewWorkItemState extends State<NewWorkItem> {
                       ))
                   .toList(),
               onChanged: (e) async {
+                setState(() => {_projectReference = e});
                 var types = await api.project().getIssueTypes(e);
-                setState(() => {_projectReference = e, _issueTypes = types});
+                setState(() => _issueTypes = types);
               }),
         ),
         Step(
@@ -69,14 +72,29 @@ class _NewWorkItemState extends State<NewWorkItem> {
                   .toList(),
               onChanged: (e) => setState(() => _issueType = e)),
         ),
+        Step(
+            state: StepState.complete,
+            title: Text('Save'),
+            content: Text('Issue will be saved on the server'))
       ],
     ));
   }
 
   next() {
-    _currentStep + 1 != 2
-        ? goTo(_currentStep + 1)
-        : setState(() => complete = true);
+    if (_currentStep + 1 != 3)
+      goTo(_currentStep + 1);
+    else {
+      var item = WorkItem(null, null, null, null, null, null,
+          _projectReference.organization, this._projectReference.name);
+      api
+          .work()
+          .create(item, _issueType)
+          .then((o) => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (c) => EditWorkItem(item: o, api: api.work()))))
+          .then((value) => Navigator.pop(context, value));
+    }
   }
 
   cancel() {

@@ -204,6 +204,11 @@ class _WorkListState extends State<WorkList>
                 onPressed: () => edit(item),
               ),
               const SizedBox(width: 8),
+              TextButton(
+                child: const Text('Delete'),
+                onPressed: () => delete(item),
+              ),
+              const SizedBox(width: 8),
             ],
           ),
         ],
@@ -337,8 +342,16 @@ class _WorkListState extends State<WorkList>
                   projects: projects,
                   api: _api,
                 )));
+    _work.add(item);
     setState(() {
       _doingWork = false;
     });
+  }
+
+  Future delete(WorkItem item) async {
+    return _api.work().delete(item).then((value) => {
+          setState(() => _work.remove(item)),
+          Fluttertoast.showToast(msg: 'Deleted')
+        });
   }
 }

@@ -1,4 +1,6 @@
+import 'package:devops/api/project.dart';
 import 'package:devops/api/work.dart';
+import 'package:devops/pages/project.dart';
 import 'package:devops/pages/work/work_list.dart';
 import 'package:devops/secrets.dart';
 import 'package:flutter/cupertino.dart';
@@ -14,7 +16,6 @@ import 'pages/profile.dart';
 class HomePage extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
-    // TODO: implement createState
     return _HomePageState();
   }
 }
@@ -28,6 +29,7 @@ class _HomePageState extends State<HomePage> {
 
   Profile _account;
   List<WorkItem> _work;
+  List<TeamProjectReference> _projects;
 
   @override
   void initState() {
@@ -117,7 +119,7 @@ class _HomePageState extends State<HomePage> {
   Widget buildBody() {
     switch (_currentIndex) {
       case 0:
-        return organisations();
+        return projects();
       case 1:
         return WorkList(_api, _work);
       case 2:
@@ -126,10 +128,14 @@ class _HomePageState extends State<HomePage> {
     throw Exception("invalid index");
   }
 
-  Widget organisations() {}
+  Widget projects() {
+    return _projects != null
+        ? ProjectWidget(projects: _projects)
+        : Center(child: CircularProgressIndicator());
+  }
 
   void loadContent() {
-    _work = null;
+    setState(() => _work = null);
     loadWork();
     _api.getMe().then((value) => setState(() {
           _account = value;
@@ -139,13 +145,18 @@ class _HomePageState extends State<HomePage> {
 
   Future loadWork() async {
     try {
-      _work = List();
+      var projects = List<TeamProjectReference>();
       var accounts = await _api.account().getAccounts(await _api.userId());
-      for (var account in accounts)
+      for (var account in accounts) {
         for (var w in await _api.work().getMyWorkItems(account.accountName)) {
           final v = await w;
-          setState(() => _work.addAll(v));
+          if (v.isNotEmpty)
+            setState(() => (_work == null ? _work = List() : _work).addAll(v));
         }
+        var p = await _api.project().getProjects(account.accountName);
+        projects.addAll(p);
+        setState(() => _projects = projects);
+      }
     } catch (e) {
       Fluttertoast.showToast(msg: e.toString(), gravity: ToastGravity.CENTER);
       setState(() {

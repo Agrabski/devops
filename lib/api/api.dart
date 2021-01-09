@@ -135,4 +135,16 @@ class AzureDevOpsApi {
           "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
     }
   }
+
+  Future makeDeleteApiCall(String urlPath, UrlType type,
+      {Map<String, String> headers}) async {
+    headers = headers ?? Map();
+    headers[HttpHeaders.authorizationHeader] = "Basic ${_getToken()}";
+    var response =
+        await http.delete("${_getUrl(type)}$urlPath", headers: headers);
+    if (response.statusCode != 200) {
+      throw Exception(
+          "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
+    }
+  }
 }

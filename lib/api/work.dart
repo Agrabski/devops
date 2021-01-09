@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:devops/api/api.dart';
 
 class WorkItem {
@@ -142,5 +144,21 @@ class WorkApi {
 
   Future<WorkItem> getWorkItem(int id, String organization) {
     return getWorkItemBatch(organization, [id]).then((value) => value.first);
+  }
+
+  Future delete(WorkItem item) {
+    return _api.makeDeleteApiCall(
+        '${item.organisation}/_apis/wit/workitems/${item.id}?api-version=6.0',
+        UrlType.Dev);
+  }
+
+  Future<WorkItem> create(WorkItem item, String type) {
+    return _api.makePostApiCall(
+        '${item.organisation}/${item.project}/_apis/wit/workitems/$type?api-version=6.0',
+        (r) => WorkItem.convert(r, item.organisation, item.project),
+        UrlType.Dev, {},
+        headers: {
+          HttpHeaders.contentTypeHeader: 'application/json-patch+json'
+        });
   }
 }
