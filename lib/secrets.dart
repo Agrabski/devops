@@ -7,6 +7,10 @@ Future storeApiKey(String key) {
   return _storage.write(key: _keyPath, value: key);
 }
 
+Future removeApiKey() {
+  return _storage.delete(key: _keyPath);
+}
+
 Future<String> readApiKey() {
   return _storage.read(key: _keyPath);
 }

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:devops/api/profile.dart';
 import 'package:devops/common/show_or_pick_image.dart';
+import 'package:devops/pages/settings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -64,7 +65,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               ],
             ),
           ),
-          onTap: () => null,
+          onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (c) => Settings())),
         )
       ],
     );

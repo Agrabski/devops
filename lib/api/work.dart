@@ -85,7 +85,7 @@ class WorkApi {
         });
   }
 
-  Future<List<WorkItem>> getMyWorkItems(String organisation,
+  Future<List<Future<List<WorkItem>>>> getMyWorkItems(String organisation,
       {String project, String team}) async {
     var path = organisation + '/';
     if (project != null) {
@@ -100,11 +100,11 @@ class WorkApi {
         UrlType.Dev,
         {'query': 'SELECT [System.Id] FROM workitem'},
         headers: {"Content-Type": "application/json"});
-    var result = List<WorkItem>();
+    var result = List<Future<List<WorkItem>>>();
     while (ids.isNotEmpty) {
       // azure devops api only lets you take 200 work items at a time
-      result.addAll(await getWorkItemBatch(organisation, ids.take(200),
-          project: project));
+      result
+          .add(getWorkItemBatch(organisation, ids.take(200), project: project));
       ids = ids.skip(200);
     }
     return result;

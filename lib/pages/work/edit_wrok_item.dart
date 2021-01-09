@@ -27,8 +27,9 @@ class _EditWorkItemState extends State<EditWorkItem> {
   _EditWorkItemState(this.item, this.api) {
     _nameController = TextEditingController(text: item.fields['System.Title']);
     _remainingWorkController = TextEditingController(
-        text:
-            item.fields['Microsoft.VSTS.Scheduling.RemainingWork'].toString());
+        text: item.fields['Microsoft.VSTS.Scheduling.RemainingWork']
+                ?.toString() ??
+            '');
   }
   @override
   Widget build(BuildContext context) {
@@ -80,7 +81,8 @@ class _EditWorkItemState extends State<EditWorkItem> {
       changedFields['/fields/System.Description'] = await description;
 
     if (_remainingWorkController.text !=
-        item.fields['Microsoft.VSTS.Scheduling.RemainingWork'])
+        (item.fields['Microsoft.VSTS.Scheduling.RemainingWork']?.toString() ??
+            ''))
       changedFields['/fields/Microsoft.VSTS.Scheduling.RemainingWork'] =
           _remainingWorkController.text;
     return changedFields;

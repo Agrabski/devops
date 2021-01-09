@@ -83,8 +83,7 @@ class _HomePageState extends State<HomePage> {
   Widget buildBottomBar() {
     var bar = BottomNavigationBar(
       items: [
-        BottomNavigationBarItem(
-            label: "Organisations", icon: Icon(Icons.business)),
+        BottomNavigationBarItem(label: "Projects", icon: Icon(Icons.business)),
         BottomNavigationBarItem(label: "My work", icon: Icon(Icons.work)),
         BottomNavigationBarItem(label: "Profile", icon: Icon(Icons.person))
       ],
@@ -140,13 +139,13 @@ class _HomePageState extends State<HomePage> {
 
   Future loadWork() async {
     try {
-      var work = List<WorkItem>();
+      _work = List();
       var accounts = await _api.account().getAccounts(await _api.userId());
       for (var account in accounts)
-        work.addAll(await _api.work().getMyWorkItems(account.accountName));
-      setState(() {
-        _work = work;
-      });
+        for (var w in await _api.work().getMyWorkItems(account.accountName)) {
+          final v = await w;
+          setState(() => _work.addAll(v));
+        }
     } catch (e) {
       Fluttertoast.showToast(msg: e.toString(), gravity: ToastGravity.CENTER);
       setState(() {

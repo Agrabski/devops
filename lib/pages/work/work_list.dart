@@ -1,10 +1,13 @@
 import 'package:devops/api/api.dart';
 import 'package:devops/api/profile.dart';
+import 'package:devops/api/project.dart';
 import 'package:devops/api/work.dart';
 import 'package:devops/common/multipleChoiceFilter.dart';
 import 'package:devops/common/pick_string.dart';
+import 'package:devops/pages/work/add_work_item.dart';
 import 'package:devops/pages/work/edit_wrok_item.dart';
 import 'package:devops/user/select_user.dart';
+import 'package:floating_action_bubble/floating_action_bubble.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -20,7 +23,10 @@ class WorkList extends StatefulWidget {
   }
 }
 
-class _WorkListState extends State<WorkList> {
+class _WorkListState extends State<WorkList>
+    with SingleTickerProviderStateMixin {
+  Animation<double> _animation;
+  AnimationController _animationController;
   final AzureDevOpsApi _api;
   static const List<String> _workItemTypes = [
     'Issue',
@@ -32,6 +38,8 @@ class _WorkListState extends State<WorkList> {
 
   List<String> _selectedWorkItemTypes = _workItemTypes;
   List<String> _selectedStates;
+  List<String> _assignees;
+  List<String> _selectedAssignees;
   bool _doingWork = false;
 
   List<String> _allStates;
@@ -44,6 +52,25 @@ class _WorkListState extends State<WorkList> {
     _selectedStates =
         _work.map((e) => e.fields['System.State'] as String).toSet().toList();
     _allStates = _selectedStates;
+    _assignees = _work
+        .map((e) => (e.fields['System.AssignedTo'] != null
+            ? e.fields['System.AssignedTo']['displayName']
+            : 'Unassigned') as String)
+        .toSet()
+        .toList();
+    _selectedAssignees = List();
+    _api.getMe().then(
+        (value) => setState(() => _selectedAssignees = [value.displayName]));
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 260),
+    );
+
+    final curvedAnimation =
+        CurvedAnimation(curve: Curves.easeInOut, parent: _animationController);
+    _animation = Tween<double>(begin: 0, end: 1).animate(curvedAnimation);
+
     super.initState();
   }
 
@@ -56,24 +83,53 @@ class _WorkListState extends State<WorkList> {
         (x.fields['System.Title'] as String)
             .toLowerCase()
             .contains(_titleFilter) &&
-        x.organisation.toLowerCase().contains(_organisationFilter);
+        x.organisation.toLowerCase().contains(_organisationFilter) &&
+        _selectedAssignees.contains(x.fields['System.AssignedTo'] != null
+            ? x.fields['System.AssignedTo']['displayName']
+            : 'Unassigned');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: buildBody(),
-      floatingActionButton: _work != null
-          ? FloatingActionButton(
-              onPressed: _showSearchDialog,
-              child: Icon(Icons.search_rounded),
-            )
-          : null,
+        body: buildBody(), floatingActionButton: buildFloatingActionButton());
+  }
+
+  Widget buildFloatingActionButton() {
+    if (_work == null) return null;
+    return FloatingActionBubble(
+      items: [
+        Bubble(
+          onPress: _showSearchDialog,
+          icon: Icons.search_rounded,
+          title: 'Search',
+          iconColor: Colors.white,
+          bubbleColor: Colors.blue,
+        ),
+        Bubble(
+          onPress: () async {
+            _animationController.reverse();
+            addWork();
+          },
+          icon: Icons.add,
+          title: 'Add',
+          iconColor: Colors.white,
+          bubbleColor: Colors.blue,
+        )
+      ],
+      animation: _animation,
+      onPress: () => _animationController.isCompleted
+          ? _animationController.reverse()
+          : _animationController.forward(),
+      iconColor: Colors.blue,
+
+      // Flaoting Action button Icon
+      icon: AnimatedIcons.menu_arrow,
     );
   }
 
   Widget buildBody() {
-    if (_work == null)
+    if (_work == null || _doingWork)
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -201,6 +257,13 @@ class _WorkListState extends State<WorkList> {
                     onChoiceChanged: (x) => setState(() => _selectedStates = x),
                     title: "Issue state",
                   ),
+                  MultipleChoiceFilter(
+                    _assignees,
+                    _selectedAssignees,
+                    onChoiceChanged: (x) =>
+                        setState(() => _selectedAssignees = x),
+                    title: "Assignee",
+                  ),
                   TextFormField(
                     onChanged: (s) =>
                         setState(() => _titleFilter = s.toLowerCase()),
@@ -223,16 +286,20 @@ class _WorkListState extends State<WorkList> {
                     child: Text("Close"))
               ],
             ));
+
+    _animationController.reverse();
   }
 
   Future loadWork() async {
-    var work = List<WorkItem>();
+    setState(() => _doingWork = true);
+    _work = List();
     var accounts = await _api.account().getAccounts(await _api.userId());
     for (var account in accounts)
-      work.addAll(await _api.work().getMyWorkItems(account.accountName));
-    setState(() {
-      _work = work;
-    });
+      for (var w in await _api.work().getMyWorkItems(account.accountName)) {
+        final v = await w;
+        setState(() => _work.addAll(v));
+        _doingWork = false;
+      }
     Fluttertoast.showToast(msg: 'Done', gravity: ToastGravity.BOTTOM);
   }
 
@@ -254,5 +321,24 @@ class _WorkListState extends State<WorkList> {
         context,
         MaterialPageRoute(
             builder: (c) => EditWorkItem(item: item, api: _api.work())));
+  }
+
+  Future addWork() async {
+    setState(() => _doingWork = true);
+    var accounts = await _api.account().getAccounts(await _api.userId());
+    var projects = List<TeamProjectReference>();
+    for (var account in accounts) {
+      projects.addAll(await _api.project().getProjects(account.accountName));
+    }
+    var item = await Navigator.push<WorkItem>(
+        context,
+        MaterialPageRoute(
+            builder: (c) => NewWorkItem(
+                  projects: projects,
+                  api: _api,
+                )));
+    setState(() {
+      _doingWork = false;
+    });
   }
 }
