@@ -28,7 +28,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   @override
   void initState() {
-    _imageBytes = base64Decode(_account.base64image);
+    if (_account != null) _imageBytes = base64Decode(_account.base64image);
     super.initState();
   }
 
@@ -36,40 +36,40 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Card(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                leading: GestureDetector(
-                  child: Image.memory(_imageBytes),
-                  onTap: changeProfilePicture,
-                ),
-                title: Text(_account.displayName),
-                subtitle: Text(_account.id),
-              ),
-            ],
-          ),
-        ),
-        InkWell(
-          child: Card(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Settings'),
-                )
-              ],
+    var children = List<Widget>();
+    children.add(Card(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ListTile(
+            leading: GestureDetector(
+              child: _account != null
+                  ? Image.memory(_imageBytes)
+                  : CircularProgressIndicator(),
+              onTap: changeProfilePicture,
             ),
+            title: Text(_account?.displayName ?? "Account name"),
+            subtitle: Text(_account?.id ?? "Account id"),
           ),
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (c) => Settings())),
-        )
-      ],
-    );
+        ],
+      ),
+    ));
+    children.add(InkWell(
+      child: Card(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Settings'),
+            )
+          ],
+        ),
+      ),
+      onTap: () => Navigator.push(
+          context, MaterialPageRoute(builder: (c) => Settings())),
+    ));
+    return Column(children: children);
   }
 
   void changeProfilePicture() async {

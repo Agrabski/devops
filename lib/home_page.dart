@@ -1,5 +1,6 @@
 import 'package:devops/api/project.dart';
 import 'package:devops/api/work.dart';
+import 'package:devops/common/with_error_handling.dart';
 import 'package:devops/pages/project.dart';
 import 'package:devops/pages/work/work_list.dart';
 import 'package:devops/secrets.dart';
@@ -22,7 +23,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _hasApiKey = false;
-  bool _contentReady() => _work != null;
   int _currentIndex = 0;
 
   AzureDevOpsApi _api;
@@ -56,18 +56,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_hasApiKey && _contentReady()) {
-      return Scaffold(
-        appBar: bar(),
-        body: buildBody(),
-        bottomNavigationBar: buildBottomBar(),
-      );
-    } else
-      return Scaffold(
-        appBar: bar(),
-        body: buildSpinner(),
-        bottomNavigationBar: buildBottomBar(),
-      );
+    return Scaffold(
+      appBar: bar(),
+      body: buildBody(),
+      bottomNavigationBar: buildBottomBar(),
+    );
   }
 
   AppBar bar() {
@@ -89,18 +82,10 @@ class _HomePageState extends State<HomePage> {
         BottomNavigationBarItem(label: "My work", icon: Icon(Icons.work)),
         BottomNavigationBarItem(label: "Profile", icon: Icon(Icons.person))
       ],
-      onTap: (i) => {
-        if (_hasApiKey && _contentReady()) setState(() => _currentIndex = i)
-      },
+      onTap: (i) => {setState(() => _currentIndex = i)},
       currentIndex: _currentIndex,
     );
-    if (_hasApiKey && _contentReady()) return bar;
-    return Theme(
-        child: bar,
-        data: ThemeData(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ));
+    return bar;
   }
 
   Widget buildSpinner() {
@@ -135,12 +120,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   void loadContent() {
-    setState(() => _work = null);
-    loadWork();
-    _api.getMe().then((value) => setState(() {
-          _account = value;
-        }));
-    //throw Exception();
+    withErrorHandling(() {
+      setState(() => {_work = null, _account = null});
+      loadWork();
+      _api.getMe().then((value) => setState(() {
+            _account = value;
+          }));
+    });
   }
 
   Future loadWork() async {

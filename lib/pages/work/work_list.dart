@@ -296,13 +296,13 @@ class _WorkListState extends State<WorkList>
   }
 
   Future loadWork() async {
+    _work = null;
     setState(() => _doingWork = true);
-    _work = List();
     var accounts = await _api.account().getAccounts(await _api.userId());
     for (var account in accounts)
       for (var w in await _api.work().getMyWorkItems(account.accountName)) {
         final v = await w;
-        setState(() => _work.addAll(v));
+        setState(() => (_work ?? (_work = List())).addAll(v));
         _doingWork = false;
       }
     Fluttertoast.showToast(msg: 'Done', gravity: ToastGravity.BOTTOM);
