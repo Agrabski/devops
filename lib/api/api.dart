@@ -6,10 +6,13 @@ import 'package:devops/api/profile.dart';
 import 'package:devops/api/project.dart';
 import 'package:devops/api/work.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/http.dart';
 
 import 'account.dart';
 
 enum UrlType { App, Dev, Vssps }
+
+class UnauthorizedException implements Exception {}
 
 class AzureDevOpsApi {
   static final _defaultAppUrl = "https://app.vssps.visualstudio.com/";
@@ -43,8 +46,7 @@ class AzureDevOpsApi {
     if (response.statusCode == 200) {
       return converter((jsonDecode(response.body)));
     }
-    throw Exception(
-        "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
+    _throwIfError(response);
   }
 
   Future<T> makePatchApiCall<T>(
@@ -57,8 +59,7 @@ class AzureDevOpsApi {
     if (response.statusCode == 200) {
       return converter((jsonDecode(response.body)));
     }
-    throw Exception(
-        "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
+    _throwIfError(response);
   }
 
   Future<T> makePostApiCall<T>(String urlPath, T Function(dynamic) converter,
@@ -71,8 +72,19 @@ class AzureDevOpsApi {
     if (response.statusCode == 200) {
       return converter((jsonDecode(response.body)));
     }
-    throw Exception(
-        "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
+    _throwIfError(response);
+  }
+
+  void _throwIfError(Response response) {
+    // microsoft is oh so special and returns 203 instead of 401 with invalid token
+    if (response.statusCode == 401 || response.statusCode == 203) {
+      throw Exception(
+          "Unauthorised! ${response.statusCode}, ${response.reasonPhrase}");
+    }
+    if (response.statusCode != 200) {
+      throw Exception(
+          "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
+    }
   }
 
   String _getUrl(UrlType type) {
@@ -99,9 +111,8 @@ class AzureDevOpsApi {
   }
 
   Future<Profile> getMe() {
-    return Future.delayed(Duration(seconds: 5)).then((value) =>
-        makeGetApiCall<Profile>('_apis/profile/profiles/me?details=true',
-            (r) => Profile.fromJson(r), UrlType.App));
+    return makeGetApiCall<Profile>('_apis/profile/profiles/me?details=true',
+        (r) => Profile.fromJson(r), UrlType.App);
   }
 
   Future<String> userId() async {
@@ -136,10 +147,8 @@ class AzureDevOpsApi {
     headers[HttpHeaders.authorizationHeader] = "Basic ${_getToken()}";
     var response = await http.put("${_getUrl(type)}$urlPath",
         headers: headers, body: jsonEncode(body));
-    if (response.statusCode != 200) {
-      throw Exception(
-          "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
-    }
+
+    _throwIfError(response);
   }
 
   Future makeDeleteApiCall(String urlPath, UrlType type,
@@ -148,9 +157,6 @@ class AzureDevOpsApi {
     headers[HttpHeaders.authorizationHeader] = "Basic ${_getToken()}";
     var response =
         await http.delete("${_getUrl(type)}$urlPath", headers: headers);
-    if (response.statusCode != 200) {
-      throw Exception(
-          "invalid return code! ${response.statusCode}, ${response.reasonPhrase}");
-    }
+    _throwIfError(response);
   }
 }

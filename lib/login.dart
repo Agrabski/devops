@@ -1,6 +1,8 @@
+import 'package:devops/api/api.dart';
 import 'package:devops/secrets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -17,7 +19,6 @@ class _LoginState extends State<Login> {
 
   @override
   void initState() {
-    // TODO: implement initState
     _controller.addListener(() {
       setState(() => _canLogin = _controller.text.isNotEmpty);
     });
@@ -49,6 +50,8 @@ class _LoginState extends State<Login> {
   }
 
   void _login() {
-    storeApiKey(_controller.text).then((value) => Navigator.pop(context));
+    storeApiKey(_controller.text).then((value) async =>
+            AzureDevOpsApi.getDefault(await readApiKey())
+                .getMe().then((value) => Navigator.pop(context)).catchError((e)=>{Fluttertoast.showToast(msg: e)}));
   }
 }
