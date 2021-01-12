@@ -52,6 +52,8 @@ class _LoginState extends State<Login> {
   void _login() {
     storeApiKey(_controller.text).then((value) async =>
             AzureDevOpsApi.getDefault(await readApiKey())
-                .getMe().then((value) => Navigator.pop(context)).catchError((e)=>{Fluttertoast.showToast(msg: e)}));
+                .getMe().catchError((e)=>{
+                  Fluttertoast.showToast(msg: 'Error occurred, try again\n${e.toString()}')
+                }).then((value) => Navigator.pop(context)));
   }
 }
