@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:devops/api/board.dart';
 import 'package:devops/api/profile.dart';
 import 'package:devops/api/project.dart';
 import 'package:devops/api/work.dart';
@@ -98,8 +99,9 @@ class AzureDevOpsApi {
   }
 
   Future<Profile> getMe() {
-    return makeGetApiCall<Profile>('_apis/profile/profiles/me?details=true',
-        (r) => Profile.fromJson(r), UrlType.App);
+    return Future.delayed(Duration(seconds: 5)).then((value) =>
+        makeGetApiCall<Profile>('_apis/profile/profiles/me?details=true',
+            (r) => Profile.fromJson(r), UrlType.App));
   }
 
   Future<String> userId() async {
@@ -122,6 +124,10 @@ class AzureDevOpsApi {
 
   ProfileApi profile() {
     return ProfileApi(this);
+  }
+
+  BoardApi board() {
+    return BoardApi(this);
   }
 
   Future makePutRequest(String urlPath, UrlType type,

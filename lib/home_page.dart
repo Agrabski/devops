@@ -115,7 +115,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget projects() {
     return _projects != null
-        ? ProjectWidget(projects: _projects)
+        ? ProjectWidget(projects: _projects, api: _api, work: _work)
         : Center(child: CircularProgressIndicator());
   }
 

@@ -11,7 +11,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 class ProfileWidget extends StatefulWidget {
   final Profile _account;
   final ProfileApi _api;
-  ProfileWidget(this._account, this._api, {Key key}) : super(key: key);
+  const ProfileWidget(this._account, this._api, {Key key}) : super(key: key);
 
   @override
   _ProfileWidgetState createState() {

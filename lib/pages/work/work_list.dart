@@ -1,12 +1,11 @@
 import 'package:devops/api/api.dart';
-import 'package:devops/api/profile.dart';
 import 'package:devops/api/project.dart';
 import 'package:devops/api/work.dart';
 import 'package:devops/common/multipleChoiceFilter.dart';
 import 'package:devops/common/pick_string.dart';
 import 'package:devops/pages/work/add_work_item.dart';
 import 'package:devops/pages/work/edit_wrok_item.dart';
-import 'package:devops/user/select_user.dart';
+import 'package:devops/pages/work/work_item.dart';
 import 'package:floating_action_bubble/floating_action_bubble.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +48,21 @@ class _WorkListState extends State<WorkList>
 
   @override
   void initState() {
+    if (_work != null) setupFilters();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 260),
+    );
+
+    final curvedAnimation =
+        CurvedAnimation(curve: Curves.easeInOut, parent: _animationController);
+    _animation = Tween<double>(begin: 0, end: 1).animate(curvedAnimation);
+
+    super.initState();
+  }
+
+  void setupFilters() {
     _selectedStates =
         _work.map((e) => e.fields['System.State'] as String).toSet().toList();
     _allStates = _selectedStates;
@@ -61,17 +75,6 @@ class _WorkListState extends State<WorkList>
     _selectedAssignees = List();
     _api.getMe().then(
         (value) => setState(() => _selectedAssignees = [value.displayName]));
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 260),
-    );
-
-    final curvedAnimation =
-        CurvedAnimation(curve: Curves.easeInOut, parent: _animationController);
-    _animation = Tween<double>(begin: 0, end: 1).animate(curvedAnimation);
-
-    super.initState();
   }
 
   List<WorkItem> _work;
@@ -157,86 +160,12 @@ class _WorkListState extends State<WorkList>
   }
 
   Widget makeWorkItem(WorkItem item) {
-    return Card(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ListTile(
-            leading: _pickIcon(item.fields['System.WorkItemType']),
-            title: Text(item.fields['System.Title']),
-            subtitle: Column(
-              children: [
-                Text('State: ${item.fields["System.State"]}'),
-                Text('Assigned to: ${getAssignee(item)}'),
-                Text('Organization: ${item.organisation}')
-              ],
-              crossAxisAlignment: CrossAxisAlignment.start,
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              TextButton(
-                child: const Text('Reassign'),
-                onPressed: () async {
-                  var profiles =
-                      await _api.profile().getProfileIdsFor(item.organisation);
-                  var user = await Navigator.push<ProfileReference>(context,
-                      MaterialPageRoute(builder: (c) => SelectUser(profiles)));
-                  try {
-                    _api
-                        .work()
-                        .assignWorkItem(item, user.name)
-                        .then((value) => loadWork());
-                  } catch (e) {}
-                },
-              ),
-              const SizedBox(width: 8),
-              TextButton(
-                child: const Text('Change state'),
-                onPressed: () {
-                  changeIssueState(item);
-                },
-              ),
-              const SizedBox(width: 8),
-              TextButton(
-                child: const Text('Edit'),
-                onPressed: () => edit(item),
-              ),
-              const SizedBox(width: 8),
-              TextButton(
-                child: const Text('Delete'),
-                onPressed: () => delete(item),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-        ],
-      ),
+    return WorkItemWidget(
+      api: _api,
+      item: item,
+      loadWork: loadWork,
+      delete: delete,
     );
-  }
-
-  Icon _pickIcon(String workitemType) {
-    switch (workitemType) {
-      case 'Issue':
-        return Icon(
-          Icons.assignment_outlined,
-          color: Colors.yellow,
-        );
-      case 'Task':
-        return Icon(Icons.assignment_late, color: Colors.green);
-      case 'Bug':
-        return Icon(Icons.adb, color: Colors.red);
-      case 'Feature':
-        return Icon(Icons.featured_video, color: Colors.purple);
-      case 'Epic':
-        return Icon(
-          Icons.map,
-          color: Colors.orange,
-        );
-      default:
-        return Icon(Icons.error);
-    }
   }
 
   void _showSearchDialog() {
@@ -305,6 +234,7 @@ class _WorkListState extends State<WorkList>
         setState(() => (_work ?? (_work = List())).addAll(v));
         _doingWork = false;
       }
+    setupFilters();
     Fluttertoast.showToast(msg: 'Done', gravity: ToastGravity.BOTTOM);
   }
 
